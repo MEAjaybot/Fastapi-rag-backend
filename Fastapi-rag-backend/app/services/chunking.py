@@ -3,9 +3,9 @@ from fastapi import APIRouter,Form
 from typing import List,Literal
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document 
-from app.api.document import upload_document
 
-router = APIRouter(prefix="/chunking", tags=["Chunking"])
+
+
 def clean_text(text: str) -> str:
     text = text.replace("\x00", " ")
     text = re.sub(r"\s+", " ", text)

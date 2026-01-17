@@ -20,13 +20,16 @@ async def extract_text(file: UploadFile)-> dict:
     document_id = str(uuid.uuid4())
 
     if filename.endswith((".pdf")):
+        type= "pdf"
         with pdfplumber.open(BytesIO(content)) as pdf:
             for page in pdf.pages:
                 t = page.extract_text()
                 if t:
                     extracted_text += t + "\n"
+        
 
     else:
+        type= "txt"
         extracted_text = content.decode("utf-8", errors="ignore")
 
     if not extracted_text.strip():
@@ -39,5 +42,7 @@ async def extract_text(file: UploadFile)-> dict:
     return {
         "filename": file.filename,
         "char_count": len(extracted_text),
-        "preview": extracted_text
+        "preview": extracted_text,
+        "filetype": file.content_type
     }
+
