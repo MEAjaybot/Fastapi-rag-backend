@@ -1,0 +1,11 @@
+Artificial Intelligence (AI) is the simulation of human intelligence in machines.
+
+Machine learning is a subset of AI that focuses on enabling systems to learn from data.
+It allows computers to improve performance without being explicitly programmed.
+
+Retrieval-Augmented Generation (RAG) combines vector search with language models.
+Documents are split into chunks, converted into embeddings, and stored in a vector database.
+During a query, the most relevant chunks are retrieved and passed to the language model.
+
+FastAPI is a modern Python framework for building APIs.
+It is commonly used for machine learning and backend services.
