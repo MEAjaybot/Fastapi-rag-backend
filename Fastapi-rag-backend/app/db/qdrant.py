@@ -3,7 +3,7 @@ from app.services.embeddings import emddeding
 import uuid
 
 import asyncio
-from app.services.chunking import chunk_text_service
+
 
 client = QdrantClient("http://localhost:6333")
 
@@ -40,4 +40,5 @@ def sync_to_qdrant(filename: str, chunks: list, vector):
 
     # 3. Upload
     client.upload_points(collection_name="RAG", points=points)
+    
     return

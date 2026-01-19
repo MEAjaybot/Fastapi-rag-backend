@@ -22,7 +22,7 @@ def chunks_fixed(text:str,chunk_size= 50,overlap=0.1)-> List[str]:
 
     return chunks
 
-def recursive_chunk_with_langchain(documents: str, max_chunk_size:1000, overlap: int = 100) -> List[str]:
+def recursive_chunk_with_langchain(documents: str, max_chunk_size:int=1000, overlap: int = 100) -> List[str]:
 
     doc = Document(page_content=documents, metadata={})
     splitter = RecursiveCharacterTextSplitter(
