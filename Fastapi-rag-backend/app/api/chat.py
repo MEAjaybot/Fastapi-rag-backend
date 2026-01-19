@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException,Depends
-from app.db.model import Booking# Your existing Qdrant client
+from app.db.model import Booking
 from qdrant_client import QdrantClient
 from pydantic import BaseModel
-from app.services.embeddings import emddeding  # Your embedding model function
+from app.services.embeddings import emddeding  
 import google.generativeai as genai
 from dotenv import load_dotenv
 import os
@@ -24,12 +24,12 @@ load_dotenv("api.env")
 router = APIRouter(prefix="/chat", tags=["Chat"])
 q_client = QdrantClient("http://localhost:6333")
 
-# 2. Request Model for POST
+
 class ChatRequest(BaseModel):
     query: str
     session_id: str = "default_user"
 
-# Configure Gemini (Replace with your actual key)
+
 GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=GEMINI_KEY)
 MODEL_NAME = "models/gemini-3-flash-preview" 
@@ -47,7 +47,7 @@ async def chat_with_pdf(request: ChatRequest,db: Session = Depends(get_db)):
         history_text = "\n".join([f"{m['role']}: {m['content']}" for m in chat_history])
         
         query_vector = np.array(emddeding(query)).tolist()
-        # 2. Search Qdrant for top 3 matching chunks
+        
         search_results = q_client.query_points(
             collection_name="RAG",
             query=query_vector,
@@ -55,12 +55,12 @@ async def chat_with_pdf(request: ChatRequest,db: Session = Depends(get_db)):
         )
                
 
-        # 3. Create context from the hits
+        
         context_text = ""
         if search_results and search_results.points:
            context_text = "\n\n".join([
                                          res.payload.get("text", "") 
-                                 for res in search_results.points  # Access the .points list
+                                 for res in search_results.points  
                                             ])
         else:
             context_text = "No relevant context found in PDFs."
@@ -84,19 +84,18 @@ async def chat_with_pdf(request: ChatRequest,db: Session = Depends(get_db)):
         {query}
         """
 
-        # 4. Generate AI Answer
+        
         response = await AsyncClient().chat(model='mistral', messages=[
             {'role': 'user', 'content': prompt},
         ])
         ai_answer = response['message']['content']
 
-        # 5. DATA EXTRACTION & POSTGRES SAVING
-        # We check the current query + history to see if we finally have a full booking
+        
         full_conversation = history_text + "\nUser: " + query 
         details = extract_booking_details(full_conversation)
         print(f"DEBUG: Extracted Details -> {details}")
 
-        # Ensure all required fields are present before saving
+        
         if all([details.get("name"), details.get("email"), details.get("date"), details.get("time")]):
             try:
                 new_booking = Booking(
@@ -113,7 +112,7 @@ async def chat_with_pdf(request: ChatRequest,db: Session = Depends(get_db)):
                 db.rollback()
                 print(f"SQL Error: {sql_err}")
 
-        # 6. Save to Redis (Maintain History)
+        
         user_msg = {"role": "User", "content": query}
         ai_msg = {"role": "Assistant", "content": ai_answer}
         redis_client.lpush(f"chat:{session_id}", json.dumps(user_msg), json.dumps(ai_msg))
