@@ -30,10 +30,7 @@ class ChatRequest(BaseModel):
     session_id: str = "default_user"
 
 
-GEMINI_KEY = os.getenv("GEMINI_API_KEY")
-genai.configure(api_key=GEMINI_KEY)
-MODEL_NAME = "models/gemini-3-flash-preview" 
-llm_model = genai.GenerativeModel(MODEL_NAME)
+
 
 
 
@@ -45,7 +42,8 @@ async def chat_with_pdf(request: ChatRequest,db: Session = Depends(get_db)):
         raw_history = redis_client.lrange(f"chat:{session_id}", 0, 9)
         chat_history = [json.loads(m) for m in reversed(raw_history)]
         history_text = "\n".join([f"{m['role']}: {m['content']}" for m in chat_history])
-        
+        history_interview_list = redis_client.lrange(f"chat:{session_id}", -3, -1)
+        history_interview = "\n".join([json.loads(m)['content'] for m in history_interview_list])
         query_vector = np.array(emddeding(query)).tolist()
         
         search_results = q_client.query_points(
@@ -72,7 +70,8 @@ async def chat_with_pdf(request: ChatRequest,db: Session = Depends(get_db)):
         TASK 1: Answer questions using ONLY the [CONTEXT].
         TASK 2: Booking interviews. To book an interview, you ONLY need: Name, Email, Date, and Time. 
         ***IMPORTANT***: Do NOT ask for a Room ID or any other information not listed above.!
-        \n\nBest Regards,\nHR Assistant [University, Kathmandu]\n\n✅.
+        ***IMPORTANT***: DO not reply \n\nBest Regards,\nHR Assistant [University, Kathmandu]\n\n✅.
+        while booking interview don0t response from content o
 
         [CONTEXT]
         {context_text}
@@ -90,27 +89,30 @@ async def chat_with_pdf(request: ChatRequest,db: Session = Depends(get_db)):
         ])
         ai_answer = response['message']['content']
 
-        
-        full_conversation = history_text + "\nUser: " + query 
-        details = extract_booking_details(full_conversation)
-        print(f"DEBUG: Extracted Details -> {details}")
+        has_intent = any(word in query.lower() for word in ["booking", "interview"])
+        was_booking_active = any(word in history_interview.lower() for word in ["booking", "interview"])
 
-        
-        if all([details.get("name"), details.get("email"), details.get("date"), details.get("time")]):
-            try:
-                new_booking = Booking(
-                    candidate_name=details["name"],
-                    candidate_email=details["email"],
-                    interview_date=details["date"],
-                    interview_time=details["time"]
-                )
-                db.add(new_booking)
-                db.commit()
-                db.refresh(new_booking)
-                ai_answer += "\n\n✅ Your interview has been successfully recorded in our database."
-            except Exception as sql_err:
-                db.rollback()
-                print(f"SQL Error: {sql_err}")
+        if has_intent or was_booking_active:
+            full_conversation = history_text + "\nUser: " + query 
+            details = extract_booking_details(full_conversation)
+            
+
+            
+            if all([details.get("name"), details.get("email"), details.get("date"), details.get("time")]):
+                try:
+                    new_booking = Booking(
+                        candidate_name=details["name"],
+                        candidate_email=details["email"],
+                        interview_date=details["date"],
+                        interview_time=details["time"]
+                    )
+                    db.add(new_booking)
+                    db.commit()
+                    db.refresh(new_booking)
+                    ai_answer += "\n\n✅ Your interview has been successfully recorded in our database."
+                except Exception as sql_err:
+                    db.rollback()
+                    print(f"SQL Error: {sql_err}")
 
         
         user_msg = {"role": "User", "content": query}
