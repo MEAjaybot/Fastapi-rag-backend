@@ -41,6 +41,9 @@ The system detects booking intent and collects required fields
 (Name, Email, Date, Time) across multiple turns before storing the
 booking in PostgreSQL.
 
+Due to API quota limitations with Gemini,  
+I switched to a local Mistral model using Ollama without changing the RAG pipeline.
+
 The project uses Docker to containerize external services such as
 Qdrant, Redis, and PostgreSQL. Docker volumes are configured to ensure
 
